@@ -1,8 +1,62 @@
 import React, { useState } from 'react';
+import { ThemeProvider, CssBaseline, Container, Paper, Grid, AppBar, Toolbar, Typography } from '@mui/material';
+import { createTheme } from '@mui/material/styles';
 import 'react-grid-layout/css/styles.css';
 import TreeView from './components/TreeView';
 import GridLayout from './components/GridLayout';
 import { GridItem, TreeItem } from './types';
+import ViewQuiltIcon from '@mui/icons-material/ViewQuilt';
+
+const theme = createTheme({
+  palette: {
+    mode: 'light',
+    primary: {
+      main: '#000000',
+      light: '#333333',
+      lighter: '#f5f5f5',
+    },
+    grey: {
+      50: '#fafafa',
+      100: '#f5f5f5',
+      200: '#eeeeee',
+      300: '#e0e0e0',
+      400: '#bdbdbd',
+      500: '#9e9e9e',
+      600: '#757575',
+      700: '#616161',
+      800: '#424242',
+      900: '#212121',
+    },
+    background: {
+      default: '#ffffff',
+      paper: '#ffffff',
+    },
+  },
+  components: {
+    MuiAppBar: {
+      styleOverrides: {
+        root: {
+          backgroundColor: '#000000',
+        },
+      },
+    },
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          textTransform: 'none',
+          borderRadius: 0,
+        },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          borderRadius: 0,
+        },
+      },
+    },
+  },
+});
 
 function App() {
   const [treeItems, setTreeItems] = useState<TreeItem[]>([
@@ -84,13 +138,11 @@ function App() {
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
       
-      // Calculate quadrant (accounting for padding and grid lines)
-      const effectiveWidth = rect.width - 32; // Subtract padding
+      const effectiveWidth = rect.width - 32;
       const effectiveHeight = rect.height - 32;
       const quadrantX = Math.floor((x - 16) / (effectiveWidth / 2));
       const quadrantY = Math.floor((y - 16) / (effectiveHeight / 2));
       
-      // Ensure coordinates are within bounds
       const boundedX = Math.max(0, Math.min(1, quadrantX));
       const boundedY = Math.max(0, Math.min(1, quadrantY));
       
@@ -103,7 +155,6 @@ function App() {
         h: 1,
       };
       
-      // Check if the quadrant is already occupied
       const isQuadrantOccupied = gridItems.some(
         item => item.x === boundedX && item.y === boundedY
       );
@@ -130,27 +181,43 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
-      <div className="h-[calc(100vh-3rem)] bg-white rounded-xl shadow-lg p-6">
-        <h1 className="text-2xl font-bold mb-6 text-gray-800">Component Builder</h1>
-        <div className="grid grid-cols-4 gap-8 h-[calc(100%-4rem)]">
-          <div className="col-span-1 h-full overflow-hidden">
-            <TreeView items={treeItems} onToggleExpand={toggleExpand} />
-          </div>
-          <div 
-            className="col-span-3 h-full overflow-hidden"
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={handleDrop}
-          >
-            <GridLayout
-              items={gridItems}
-              onLayoutChange={handleLayoutChange}
-              onRemoveItem={handleRemoveGridItem}
-            />
-          </div>
-        </div>
-      </div>
-    </div>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <AppBar position="static" elevation={0}>
+        <Toolbar>
+          <ViewQuiltIcon sx={{ mr: 2 }} />
+          <Typography variant="h6" component="h1">
+            Quadrant Layout Builder
+          </Typography>
+        </Toolbar>
+      </AppBar>
+      <Container maxWidth="xl" sx={{ py: 4, height: 'calc(100vh - 64px)' }}>
+        <Paper elevation={3} sx={{ p: 3, height: '100%' }}>
+          <Grid container spacing={3} sx={{ height: '100%' }}>
+            <Grid item xs={12} md={3}>
+              <TreeView 
+                items={treeItems} 
+                onToggleExpand={toggleExpand} 
+                droppedItems={gridItems.map(item => item.id)}
+              />
+            </Grid>
+            <Grid 
+              item 
+              xs={12} 
+              md={9}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={handleDrop}
+            >
+              <GridLayout
+                items={gridItems}
+                onLayoutChange={handleLayoutChange}
+                onRemoveItem={handleRemoveGridItem}
+              />
+            </Grid>
+          </Grid>
+        </Paper>
+      </Container>
+    </ThemeProvider>
   );
 }
 

@@ -1,7 +1,9 @@
 import React, { useRef, useEffect, useState } from 'react';
 import RGL, { WidthProvider } from 'react-grid-layout';
 import { GridItem } from '../types';
-import { X } from 'lucide-react';
+import { Box, Button, Paper } from '@mui/material';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import CloseIcon from '@mui/icons-material/Close';
 
 const ReactGridLayout = WidthProvider(RGL);
 
@@ -28,96 +30,199 @@ const GridLayout: React.FC<GridLayoutProps> = ({
     };
 
     updateDimensions();
-    const resizeObserver = new ResizeObserver(updateDimensions);
-    if (containerRef.current) {
-      resizeObserver.observe(containerRef.current);
-    }
-
-    return () => resizeObserver.disconnect();
+    window.addEventListener('resize', updateDimensions);
+    
+    return () => window.removeEventListener('resize', updateDimensions);
   }, []);
 
-  // Calculate dimensions
-  const padding = 16; // Container padding
-  const gap = 16; // Gap between items
+  const handleGeneratePDF = () => {
+    const quadrants: Record<number, string> = {};
+    items.forEach(item => {
+      const quadrantNumber = (item.y * 2) + item.x + 1;
+      quadrants[quadrantNumber] = item.content;
+    });
+
+    console.log('Data to be sent to backend:', {
+      quadrants,
+      summary: {
+        totalComponents: items.length,
+        occupiedQuadrants: Object.keys(quadrants).length,
+        components: Object.entries(quadrants).map(([quadrant, component]) => 
+          `Quadrant ${quadrant}: ${component}`
+        )
+      }
+    });
+  };
+
+  const padding = 16;
+  const gap = 16;
   const availableWidth = dimensions.width - (padding * 2);
-  const availableHeight = dimensions.height - (padding * 2);
-  const rowHeight = Math.floor((availableHeight - gap) / 2);
+  const availableHeight = dimensions.height - 80;
+  const gridHeight = Math.min(availableHeight, availableWidth * 0.75);
+  const rowHeight = Math.floor((gridHeight - gap) / 2);
+
+  const quadrantStyle = {
+    position: 'absolute',
+    width: '50%',
+    height: '50%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: 'rgba(0, 0, 0, 0.1)',
+    fontSize: '64px',
+    fontWeight: 'bold',
+    pointerEvents: 'none',
+    zIndex: 0
+  };
 
   return (
-    <div 
-      ref={containerRef} 
-      className="h-full bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 relative"
-      style={{ padding: `${padding}px` }}
-    >
-      {/* Grid lines */}
-      <div className="absolute inset-4 pointer-events-none">
-        <div className="w-full h-full grid grid-cols-2 grid-rows-2 gap-4">
-          {/* Vertical divider */}
-          <div className="absolute left-1/2 top-0 w-px h-full bg-gray-300 -translate-x-1/2"></div>
-          {/* Horizontal divider */}
-          <div className="absolute top-1/2 left-0 h-px w-full bg-gray-300 -translate-y-1/2"></div>
-          
-          {/* Quadrant labels when empty */}
-          {items.length === 0 && (
-            <>
-              <div className="flex items-center justify-center text-gray-400">Quadrant 1</div>
-              <div className="flex items-center justify-center text-gray-400">Quadrant 2</div>
-              <div className="flex items-center justify-center text-gray-400">Quadrant 3</div>
-              <div className="flex items-center justify-center text-gray-400">Quadrant 4</div>
-            </>
-          )}
-        </div>
-      </div>
-
-      <ReactGridLayout
-        className="layout"
-        cols={2}
-        rowHeight={rowHeight}
-        width={availableWidth}
-        onLayoutChange={onLayoutChange}
-        compactType={null}
-        maxRows={2}
-        isDraggable={false}
-        isResizable={false}
-        preventCollision={true}
-        margin={[gap, gap]}
-        containerPadding={[0, 0]}
-        useCSSTransforms={true}
-      >
-        {items.map((item) => (
-          <div
-            key={item.id}
-            data-grid={{ 
-              x: item.x, 
-              y: item.y, 
-              w: 1, 
-              h: 1, 
-              static: true 
-            }}
-            className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow duration-200"
-          >
-            <div className="h-full relative flex flex-col">
-              <button
-                onClick={() => onRemoveItem(item.id)}
-                className="absolute top-3 right-3 z-10 p-2 bg-white text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all duration-200 shadow-sm"
-                aria-label="Remove component"
-              >
-                <X size={20} />
-              </button>
-              <div className="flex-1 flex items-center justify-center text-lg font-medium p-4">
-                {item.content}
-              </div>
-            </div>
-          </div>
-        ))}
-      </ReactGridLayout>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+        <Button
+          variant="contained"
+          disabled={items.length === 0}
+          onClick={handleGeneratePDF}
+          startIcon={<FileDownloadIcon />}
+        >
+          Log Layout Data
+        </Button>
+      </Box>
       
-      {items.length === 0 && (
-        <div className="absolute inset-0 flex items-center justify-center text-gray-500 pointer-events-none">
-          Drag components here
-        </div>
-      )}
-    </div>
+      <Paper
+        ref={containerRef}
+        variant="outlined"
+        sx={{
+          flex: 1,
+          bgcolor: 'grey.50',
+          border: '2px dashed',
+          borderColor: 'grey.300',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'relative',
+          overflow: 'hidden'
+        }}
+      >
+        <Box
+          sx={{
+            position: 'relative',
+            width: availableWidth,
+            height: gridHeight,
+            p: 2
+          }}
+        >
+          <Box sx={{ ...quadrantStyle as any, top: 16, left: 16 }}>1</Box>
+          <Box sx={{ ...quadrantStyle as any, top: 16, right: 16 }}>2</Box>
+          <Box sx={{ ...quadrantStyle as any, bottom: 16, left: 16 }}>3</Box>
+          <Box sx={{ ...quadrantStyle as any, bottom: 16, right: 16 }}>4</Box>
+
+          <Box
+            sx={{
+              position: 'absolute',
+              inset: 16,
+              pointerEvents: 'none',
+              '& .grid-lines': {
+                width: '100%',
+                height: '100%',
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gridTemplateRows: '1fr 1fr',
+                gap: 2,
+                '& > div': {
+                  border: '1px solid',
+                  borderColor: 'grey.200',
+                  borderRadius: 1,
+                  backgroundColor: 'rgba(255, 255, 255, 0.5)',
+                  padding: 2
+                }
+              }
+            }}
+          >
+            <Box className="grid-lines">
+              <Box />
+              <Box />
+              <Box />
+              <Box />
+            </Box>
+          </Box>
+
+          <ReactGridLayout
+            className="layout"
+            cols={2}
+            rowHeight={rowHeight}
+            width={availableWidth - (padding * 2)}
+            onLayoutChange={onLayoutChange}
+            compactType={null}
+            maxRows={2}
+            isDraggable={false}
+            isResizable={false}
+            preventCollision={true}
+            margin={[gap, gap]}
+            containerPadding={[0, 0]}
+            useCSSTransforms={true}
+          >
+            {items.map((item) => (
+              <Paper
+                key={item.id}
+                elevation={2}
+                sx={{
+                  width: '100%',
+                  height: '100%',
+                  transition: 'box-shadow 200ms',
+                  '&:hover': {
+                    boxShadow: 6
+                  }
+                }}
+                data-grid={{ 
+                  x: item.x, 
+                  y: item.y, 
+                  w: 1, 
+                  h: 1, 
+                  static: true 
+                }}
+              >
+                <Box sx={{ 
+                  height: '100%', 
+                  position: 'relative', 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  p: 2
+                }}>
+                  <Button
+                    onClick={() => onRemoveItem(item.id)}
+                    sx={{
+                      position: 'absolute',
+                      top: 8,
+                      right: 8,
+                      minWidth: 0,
+                      p: 1,
+                      borderRadius: '50%',
+                      color: 'text.secondary',
+                      '&:hover': {
+                        color: 'error.main',
+                        bgcolor: 'error.lighter'
+                      }
+                    }}
+                  >
+                    <CloseIcon />
+                  </Button>
+                  <Box sx={{ 
+                    flex: 1, 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    typography: 'body1',
+                    fontWeight: 500
+                  }}>
+                    {item.content}
+                  </Box>
+                </Box>
+              </Paper>
+            ))}
+          </ReactGridLayout>
+        </Box>
+      </Paper>
+    </Box>
   );
 };
 

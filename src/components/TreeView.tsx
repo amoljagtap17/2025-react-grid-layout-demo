@@ -1,83 +1,156 @@
 import React from 'react';
 import { TreeItem } from '../types';
-import { ChevronRight, ChevronDown } from 'lucide-react';
+import { List, ListItem, ListItemButton, ListItemIcon, ListItemText, Paper, Typography } from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 
 interface TreeViewProps {
   items: TreeItem[];
   onToggleExpand: (id: string) => void;
+  droppedItems: string[];
 }
 
 const TreeItemComponent: React.FC<{
   item: TreeItem;
   level: number;
   onToggleExpand: (id: string) => void;
-}> = ({ item, level, onToggleExpand }) => {
+  droppedItems: string[];
+}> = ({ item, level, onToggleExpand, droppedItems }) => {
   const hasChildren = item.children && item.children.length > 0;
-  const bgColorClass = level === 0 ? 'hover:bg-blue-50' 
-    : level === 1 ? 'hover:bg-green-50' 
-    : 'hover:bg-purple-50';
-  const indentClass = `ml-${level * 4}`;
+  const isDropped = droppedItems.includes(item.id);
+  const bgColor = level === 0 ? 'grey.800' : 
+                 level === 1 ? 'grey.100' : 
+                 'background.paper';
+  const textColor = level === 0 ? 'common.white' : 'text.primary';
+
+  const handleDragStart = (e: React.DragEvent) => {
+    if (!hasChildren) {
+      e.stopPropagation();
+      e.dataTransfer.setData('text/plain', item.id);
+      
+      // Create a custom drag image
+      const dragImage = document.createElement('div');
+      dragImage.style.padding = '8px 16px';
+      dragImage.style.background = '#000';
+      dragImage.style.color = '#fff';
+      dragImage.style.position = 'fixed';
+      dragImage.style.top = '-100px';
+      dragImage.style.left = '-100px';
+      dragImage.textContent = item.name;
+      document.body.appendChild(dragImage);
+      
+      e.dataTransfer.setDragImage(dragImage, 0, 0);
+      
+      // Clean up the drag image after dragging
+      setTimeout(() => {
+        document.body.removeChild(dragImage);
+      }, 0);
+    }
+  };
 
   return (
     <>
-      <li
-        className={`relative ${bgColorClass} rounded-lg transition-colors`}
+      <ListItem 
+        disablePadding 
+        sx={{ pl: level * 2 }}
       >
-        <div 
-          className={`flex items-center p-2 ${indentClass} ${hasChildren ? 'cursor-pointer' : 'cursor-move'}`}
+        <ListItemButton
           onClick={() => hasChildren && onToggleExpand(item.id)}
           draggable={!hasChildren}
-          onDragStart={(e) => {
-            if (!hasChildren) {
-              e.dataTransfer.setData('text/plain', item.id);
+          disabled={isDropped}
+          onDragStart={handleDragStart}
+          sx={{
+            borderRadius: 0,
+            bgcolor: bgColor,
+            opacity: isDropped ? 0.5 : 1,
+            mb: 0.5,
+            '&:hover': {
+              bgcolor: isDropped ? bgColor : 
+                      level === 0 ? 'grey.700' : 
+                      level === 1 ? 'grey.200' : 
+                      'grey.50'
+            },
+            '&.Mui-disabled': {
+              opacity: 0.5,
+              bgcolor: bgColor
             }
           }}
         >
-          {hasChildren && (
-            <span className="mr-1">
-              {item.isExpanded ? (
-                <ChevronDown size={16} className="text-gray-500" />
+          <ListItemIcon sx={{ minWidth: 32, color: textColor }}>
+            {hasChildren ? (
+              item.isExpanded ? (
+                <ExpandMoreIcon />
               ) : (
-                <ChevronRight size={16} className="text-gray-500" />
-              )}
-            </span>
-          )}
-          <span className={`${hasChildren ? 'font-medium' : ''}`}>
-            {item.name}
-          </span>
-        </div>
-      </li>
+                <ChevronRightIcon />
+              )
+            ) : (
+              <DragIndicatorIcon />
+            )}
+          </ListItemIcon>
+          <ListItemText 
+            primary={item.name}
+            primaryTypographyProps={{
+              fontWeight: hasChildren ? 600 : 400,
+              color: isDropped ? 'text.disabled' : textColor,
+              fontSize: level === 0 ? 14 : 13
+            }}
+          />
+        </ListItemButton>
+      </ListItem>
       {hasChildren && item.isExpanded && (
-        <ul className="mt-1">
+        <List disablePadding>
           {item.children.map((child) => (
             <TreeItemComponent
               key={child.id}
               item={child}
               level={level + 1}
               onToggleExpand={onToggleExpand}
+              droppedItems={droppedItems}
             />
           ))}
-        </ul>
+        </List>
       )}
     </>
   );
 };
 
-const TreeView: React.FC<TreeViewProps> = ({ items, onToggleExpand }) => {
+const TreeView: React.FC<TreeViewProps> = ({ items, onToggleExpand, droppedItems }) => {
   return (
-    <div className="h-full bg-white rounded-lg shadow p-4 overflow-auto">
-      <h2 className="text-lg font-semibold mb-4">Components</h2>
-      <ul className="space-y-1">
+    <Paper 
+      elevation={1} 
+      sx={{ 
+        height: '100%',
+        overflow: 'auto',
+        p: 2,
+        bgcolor: 'background.default',
+        border: 1,
+        borderColor: 'grey.200'
+      }}
+    >
+      <Typography 
+        variant="h6" 
+        sx={{ 
+          mb: 2,
+          fontWeight: 600,
+          fontSize: 16,
+          color: 'grey.900'
+        }}
+      >
+        Components
+      </Typography>
+      <List disablePadding>
         {items.map((item) => (
           <TreeItemComponent
             key={item.id}
             item={item}
             level={0}
             onToggleExpand={onToggleExpand}
+            droppedItems={droppedItems}
           />
         ))}
-      </ul>
-    </div>
+      </List>
+    </Paper>
   );
 };
 

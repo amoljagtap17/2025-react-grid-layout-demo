@@ -13,3 +13,8 @@ export interface TreeItem {
   children?: TreeItem[];
   isExpanded?: boolean;
 }
+
+export interface QuadrantData {
+  position: number;
+  component: string;
+}
